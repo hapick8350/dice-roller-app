@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:provider/provider.dart';
+import 'theme_manager.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final themeManager = ThemeManager();
+  await themeManager.loadTheme();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => themeManager,
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -10,17 +22,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '주사위 굴리기',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Pretendard',
-      ),
-      home: const DicePage(),
+    return Consumer<ThemeManager>(
+      builder: (context, themeManager, child) {
+        return MaterialApp(
+          title: '주사위 굴리기',
+          themeMode: themeManager.themeMode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+            fontFamily: 'Pretendard',
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+            fontFamily: 'Pretendard',
+          ),
+          home: const DicePage(),
+        );
+      },
     );
   }
 }
@@ -151,13 +176,15 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
   }
 
   Widget _buildDot(Alignment alignment) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Align(
       alignment: alignment,
       child: Container(
         width: 24,
         height: 24,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -239,8 +266,11 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor:
+          isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           '🎲 주사위 굴리기',
@@ -252,16 +282,39 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          Consumer<ThemeManager>(
+            builder: (context, themeManager, child) {
+              return IconButton(
+                onPressed: () => themeManager.cycleTheme(),
+                icon: Icon(
+                  themeManager.isLightMode
+                      ? Icons.light_mode
+                      : themeManager.isDarkMode
+                          ? Icons.dark_mode
+                          : Icons.brightness_auto,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                tooltip: '테마 변경',
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8FAFC),
-              Color(0xFFE2E8F0),
-            ],
+            colors: isDark
+                ? [
+                    const Color(0xFF1A1A1A),
+                    const Color(0xFF2D2D2D),
+                  ]
+                : [
+                    const Color(0xFFF8FAFC),
+                    const Color(0xFFE2E8F0),
+                  ],
           ),
         ),
         child: SafeArea(
@@ -270,21 +323,21 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // 제목
-                const Text(
+                Text(
                   '주사위를 굴려보세요',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
                     letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   '버튼을 눌러서 무작위 숫자를 확인하세요',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF64748B),
+                    color: isDark ? Colors.grey[300] : const Color(0xFF64748B),
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -305,17 +358,24 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
                             width: 220,
                             height: 220,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFFFFFFFF),
-                                  Color(0xFFF1F5F9),
-                                ],
+                                colors: isDark
+                                    ? [
+                                        const Color(0xFFFFFFFF),
+                                        const Color(0xFFF1F5F9),
+                                      ]
+                                    : [
+                                        const Color(0xFF2D2D2D),
+                                        const Color(0xFF1A1A1A),
+                                      ],
                               ),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: const Color(0xFFE2E8F0),
+                                color: isDark
+                                    ? const Color(0xFFE2E8F0)
+                                    : Colors.grey[700]!,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -402,19 +462,21 @@ class _DicePageState extends State<DicePage> with TickerProviderStateMixin {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFFE2E8F0),
+                      color:
+                          isDark ? Colors.grey[700]! : const Color(0xFFE2E8F0),
                       width: 1,
                     ),
                   ),
                   child: Text(
                     '현재 숫자: $_diceNumber',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
+                      color:
+                          isDark ? Colors.grey[300] : const Color(0xFF64748B),
                     ),
                   ),
                 ),
