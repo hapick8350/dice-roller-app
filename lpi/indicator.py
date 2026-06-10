@@ -89,7 +89,13 @@ def compute_lpi(df: pd.DataFrame, weights: dict[str, float] | None = None) -> pd
     mask = ~np.isnan(vals)
     wsum = (mask * wvec).sum(axis=1)
     num = np.nansum(vals * wvec, axis=1)
-    comps["lpi"] = np.where(wsum > 0, num / wsum, np.nan)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        raw = np.where(wsum > 0, num / wsum, np.nan)
+    raw = pd.Series(raw, index=comps.index)
     # Require at least half the total weight to be live before printing a value.
-    comps.loc[wsum < 0.5 * wvec.sum(), "lpi"] = np.nan
+    raw[wsum < 0.5 * wvec.sum()] = np.nan
+    # A mean of imperfectly correlated z-scores has stdev well below 1, which
+    # would make a ±2 threshold near-unreachable. Re-standardise the composite
+    # against its own rolling distribution so ±2 means "2σ vs the last 30d".
+    comps["lpi"] = rolling_z(raw)
     return comps

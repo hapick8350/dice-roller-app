@@ -1,0 +1,96 @@
+
+======================================================================
+BTCUSDT  2025-05 → 2026-05
+======================================================================
+
+bars: 9504   long-crowded events: 35   short-crowded events: 48
+
+-- LPI >= +2.0 (long-crowded → fade short). fade_mean > baseline & hit>50% supports the signal --
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        35       -0.004         -0.019      42.857            0.007     -0.073    0.942
+    12h        35        0.332          0.367      60.000            0.021      1.070    0.292
+    24h        35        0.571          0.455      68.571            0.044      1.539    0.133
+    48h        35        0.001          0.296      60.000            0.092     -0.185    0.854
+
+-- LPI <= -2.0 (short-crowded → fade long) --
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        48        0.201          0.109      56.250           -0.007      1.630    0.110
+    12h        48       -0.016         -0.030      50.000           -0.021      0.019    0.985
+    24h        48       -0.022          0.049      54.167           -0.044      0.045    0.964
+    48h        48       -0.019         -0.302      47.917           -0.092      0.144    0.886
+
+-- component IC vs forward 24h return (negative = expected sign) --
+component  spearman_ic_24h  p_value    n
+funding_z           -0.027    0.009 9121
+     oi_z           -0.002    0.812 9097
+cvd_div_z           -0.019    0.063 9097
+      lpi           -0.034    0.001 8738
+
+-- grid-bot risk filter: conditions ahead of the next 24h --
+    regime  n_bars  fwd_24h_vol_%  mean_max_drawdown_24h_%  mean_max_runup_24h_%
+|LPI| >= 2     509          2.198                   -2.083                 1.690
+ |LPI| < 2    8253          1.926                   -1.703                 1.545
+
+-- out-of-sample split (long-crowded side) --
+[first_half]
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        19        0.128         -0.013      42.105           -0.000      0.667    0.513
+    12h        19        0.460          0.185      57.895            0.000      1.336    0.198
+    24h        19        0.387          0.119      68.421            0.016      1.000    0.331
+    48h        19       -0.342          0.140      57.895            0.052     -0.667    0.513
+[second_half]
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        16       -0.160         -0.058      43.750            0.015     -0.795    0.439
+    12h        16        0.181          0.463      62.500            0.045      0.272    0.789
+    24h        16        0.791          1.346      68.750            0.076      1.158    0.265
+    48h        16        0.409          0.464      62.500            0.139      0.325    0.749
+
+chart saved: lpi_BTCUSDT.png
+
+======================================================================
+ETHUSDT  2025-05 → 2026-05
+======================================================================
+
+bars: 9504   long-crowded events: 36   short-crowded events: 37
+
+-- LPI >= +2.0 (long-crowded → fade short). fade_mean > baseline & hit>50% supports the signal --
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        36        0.131          0.297      58.333           -0.014      0.653    0.518
+    12h        36        0.222         -0.062      50.000           -0.043      0.838    0.408
+    24h        36        0.397          0.723      58.333           -0.086      0.950    0.348
+    48h        36        0.434          0.381      58.333           -0.179      0.800    0.429
+
+-- LPI <= -2.0 (short-crowded → fade long) --
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        37       -0.443         -0.279      37.838            0.014     -1.710    0.096
+    12h        37       -0.368         -0.194      40.541            0.043     -1.048    0.302
+    24h        37        0.083          0.204      56.757            0.086     -0.005    0.996
+    48h        37        0.061         -0.095      48.649            0.179     -0.119    0.906
+
+-- component IC vs forward 24h return (negative = expected sign) --
+component  spearman_ic_24h  p_value    n
+funding_z           -0.032    0.002 9121
+     oi_z            0.025    0.017 9097
+cvd_div_z            0.011    0.282 9097
+      lpi            0.010    0.342 8738
+
+-- grid-bot risk filter: conditions ahead of the next 24h --
+    regime  n_bars  fwd_24h_vol_%  mean_max_drawdown_24h_%  mean_max_runup_24h_%
+|LPI| >= 2     554          3.236                   -3.325                 2.417
+ |LPI| < 2    8208          2.996                   -2.624                 2.511
+
+-- out-of-sample split (long-crowded side) --
+[first_half]
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        18       -0.324         -0.139      50.000           -0.051     -0.788    0.442
+    12h        18       -0.220         -0.318      38.889           -0.153     -0.127    0.901
+    24h        18       -0.277         -0.593      44.444           -0.291      0.015    0.988
+    48h        18       -0.577         -0.502      50.000           -0.571     -0.005    0.996
+[second_half]
+horizon  n_events  fade_mean_%  fade_median_%  hit_rate_%  baseline_mean_%  t_vs_base  p_value
+     4h        18        0.587          0.475      66.667            0.029      2.288    0.035
+    12h        18        0.665          0.672      61.111            0.087      1.758    0.097
+    24h        18        1.071          1.345      72.222            0.154      2.335    0.032
+    48h        18        1.445          0.618      66.667            0.285      1.328    0.202
+
+chart saved: lpi_ETHUSDT.png
