@@ -1,0 +1,54 @@
+# LPI — Leverage Pressure Index (레버리지 압력 지수)
+
+선물 시장에만 존재하는 정보(포지션 쏠림 + 강제 청산)를 읽는 복합 지표.
+가격 방향 예측이 아니라 **"지금 시장이 한쪽으로 얼마나 무리하게 기울어
+있고, 그게 터지기 직전인가"** — 구조적 취약성 — 를 수치화한다.
+
+## 구성 요소 (모두 선물 전용 데이터, 각각 30일 롤링 z-score)
+
+| 성분 | 데이터 | 해석 |
+|---|---|---|
+| `funding_z` | 펀딩비 (8h) | 펀딩 극단 지속 = 롱이 비용을 감수하며 버티는 중 |
+| `oi_z` | ΔOI/OI (24h) × sign(가격 24h) | 가격↑+OI 급증 = 신규 레버리지 롱 유입 (취약) |
+| `cvd_div_z` | 가격 z − CVD z (24h) | 가격은 가는데 테이커 매수가 못 따라옴 = 수요 없는 레버리지 펌프 |
+| `liq_z` | log(숏청산/롱청산) 24h | 숏청산 소진 = 스퀴즈가 자기 연료를 태우는 중 (라이브 전용) |
+
+**합성**: 동일 가중(0.25) 가중평균. 결측 성분은 자동으로 가중치
+재정규화 — 백테스트(3성분)와 라이브(4성분)가 같은 코드를 쓴다.
+
+**해석**: `LPI ≥ +2` = 롱 과밀 (하방 청산 연쇄 취약 / 숏 페이드 후보),
+`LPI ≤ −2` = 숏 과밀 (스퀴즈/반등 취약).
+
+가중치를 백테스트로 최적화하지 않는 것이 설계 원칙이다 (과적합 직행).
+성분별 단독 IC를 먼저 보고 빼거나 남기는 방식으로만 조정할 것.
+
+## 파일
+
+- `data.py` — data.binance.vision 아카이브 로더 (klines 1h / fundingRate / metrics=OI). 캐시: `data_cache/`
+- `indicator.py` — 성분 계산 + LPI 합성
+- `backtest.py` — 이벤트 스터디 (역추세 페이드 수익률 vs 베이스라인, 성분별 IC, 그리드 봇 리스크 필터, OOS 반분 검증)
+- `run_backtest.py` — 실행 스크립트: `python3 run_backtest.py BTCUSDT ETHUSDT`
+- `collector.py` — 라이브 수집기 (웹소켓: markPrice/aggTrade/forceOrder + OI REST 폴링) → 시간봉 CSV. **청산 데이터는 과거분을 구할 수 없으므로 미리 돌려서 쌓아야 한다.**
+
+```bash
+pip install pandas numpy scipy matplotlib requests websockets
+python3 run_backtest.py            # BTCUSDT, ETHUSDT 기본
+python3 collector.py BTCUSDT       # 봇 호스트에서 상시 실행 (지역 차단 주의: HTTP 451)
+```
+
+## 백테스트 읽는 법
+
+- `fade_mean_%` — 신호 발생 후 군중 반대 방향(롱 과밀이면 숏) 보유 수익률.
+  `baseline_mean_%`(무조건부 같은 방향)보다 크고 `hit_rate > 50%`면 엣지.
+- 이벤트는 임계 돌파 첫 봉만 집계 + 24h 쿨다운 (중복 표본 방지).
+- `risk_filter` — |LPI|≥2 구간의 향후 24h 실현 변동성·최대 역행폭.
+  그리드 봇 "지금 위험" 필터의 근거.
+- `oos_split` — 기간 반분. 두 구간 부호가 다르면 그 신호는 버려라.
+
+## 알려진 한계
+
+- 아카이브에 liquidationSnapshot이 중단되어 백테스트는 3성분이다.
+  `liq_z`는 collector를 돌려 데이터가 쌓인 뒤에야 검증 가능.
+- 펀딩/OI 신호는 강추세 구간에서 며칠씩 과열 상태로 지속될 수 있다.
+  LPI 단독 진입이 아니라 트리거(구조 붕괴, 가격 확인)와 결합할 것.
+- 이벤트 표본이 수십 개 수준이라 t-stat은 참고치로만.
