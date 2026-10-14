@@ -1,0 +1,20 @@
+{
+  "name": "bom-portal",
+  "version": "0.1.0",
+  "description": "SAP Business ByDesign BOM 조회·등록 웹 포털",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "express": "5.3.0",
+    "multer": "2.4.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}

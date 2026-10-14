@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BOM 포털</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">BOM 포털 <span class="sub">SAP Business ByDesign</span></div>
+    <nav id="tabs">
+      <button data-tab="boms" class="active">BOM 조회</button>
+      <button data-tab="analysis">전개 분석</button>
+      <button data-tab="history">변경이력</button>
+      <button data-tab="upload">엑셀 등록</button>
+      <button data-tab="jobs">업로드 내역</button>
+    </nav>
+    <div class="who"><span id="mode-badge" class="badge"></span> <span id="user-name"></span></div>
+  </header>
+
+  <main>
+    <!-- BOM 조회 -->
+    <section id="tab-boms" class="tab active">
+      <form id="bom-search" class="filters">
+        <label>모품목/품명 <input name="q" placeholder="예: FG-1000"></label>
+        <label>플랜트 <input name="plant" placeholder="예: P100" size="8"></label>
+        <label>상태
+          <select name="status">
+            <option value="">전체</option>
+            <option value="IN_PREPARATION">작성중 버전 있음</option>
+            <option value="RELEASED">해제 버전 있음</option>
+          </select>
+        </label>
+        <button type="submit" class="primary">조회</button>
+        <button type="button" data-export="boms">엑셀</button>
+      </form>
+      <div class="split">
+        <div class="pane">
+          <table id="bom-list" class="grid clickable">
+            <thead><tr>
+              <th>모품목</th><th>품명</th><th>플랜트</th><th>유효버전</th><th>유효시작일</th>
+              <th class="num">구성품</th><th class="num">버전</th><th>작성중</th><th>최종변경</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pane" id="bom-detail"><p class="empty">왼쪽 목록에서 BOM을 선택하세요.</p></div>
+      </div>
+    </section>
+
+    <!-- 전개 분석 -->
+    <section id="tab-analysis" class="tab">
+      <div class="cards2">
+        <form id="explode-form" class="filters card">
+          <h3>정전개 (하위 구성)</h3>
+          <label>모품목 <input name="material" required placeholder="FG-1000"></label>
+          <label>플랜트 <input name="plant" required value="P100" size="8"></label>
+          <label>생산수량 <input name="qty" type="number" min="0" step="any" value="1" style="width:6em"></label>
+          <label>기준일 <input name="date" type="date" title="비우면 현재 해제 버전"></label>
+          <button class="primary">전개</button>
+          <button type="button" data-export="explode">엑셀</button>
+        </form>
+        <form id="whereused-form" class="filters card">
+          <h3>역전개 (사용처)</h3>
+          <label>자재 <input name="component" required placeholder="RM-0003"></label>
+          <label>플랜트 <input name="plant" required value="P100" size="8"></label>
+          <label>기준일 <input name="date" type="date"></label>
+          <button class="primary">조회</button>
+          <button type="button" data-export="whereused">엑셀</button>
+        </form>
+      </div>
+      <div id="analysis-result"></div>
+    </section>
+
+    <!-- 변경이력 -->
+    <section id="tab-history" class="tab">
+      <form id="history-form" class="filters">
+        <label>모품목 <input name="material" placeholder="전체"></label>
+        <label>플랜트 <input name="plant" size="8"></label>
+        <label>변경일(부터) <input name="from" type="date"></label>
+        <label>변경일(까지) <input name="to" type="date"></label>
+        <label>변경자 <input name="user" size="8"></label>
+        <label>유형
+          <select name="type">
+            <option value="">전체</option>
+            <option value="CREATED">최초 등록</option>
+            <option value="ADDED">구성품 추가</option>
+            <option value="REMOVED">구성품 삭제</option>
+            <option value="QTY_CHANGED">수량 변경</option>
+            <option value="UNIT_CHANGED">단위 변경</option>
+          </select>
+        </label>
+        <button class="primary">조회</button>
+        <button type="button" data-export="history">엑셀</button>
+      </form>
+      <table id="history-table" class="grid">
+        <thead><tr>
+          <th>변경일시</th><th>변경자</th><th>모품목</th><th>플랜트</th><th>버전</th><th>상태</th><th>유형</th>
+          <th>구성품</th><th>품명</th><th class="num">이전</th><th class="num">변경</th><th>유효시작일</th><th>변경사유</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- 엑셀 등록 -->
+    <section id="tab-upload" class="tab">
+      <div class="card steps">
+        <div><b>1.</b> <a href="/api/upload/template">업로드 양식 내려받기</a> (작성방법 시트 참고)</div>
+        <div><b>2.</b> 작성한 파일 선택 후 <b>검증</b> → 변경 내용 확인</div>
+        <div><b>3.</b> 오류가 없으면 <b>SAP 반영</b> (기본: 작성중 버전으로 등록)</div>
+      </div>
+      <form id="upload-form" class="filters">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button class="primary">검증</button>
+      </form>
+      <div id="upload-result"></div>
+    </section>
+
+    <!-- 업로드 내역 -->
+    <section id="tab-jobs" class="tab">
+      <div class="filters"><button id="jobs-refresh">새로고침</button></div>
+      <table id="jobs-table" class="grid clickable">
+        <thead><tr>
+          <th>번호</th><th>파일</th><th>업로드</th><th>일시</th><th>상태</th><th class="num">BOM</th><th class="num">오류</th>
+          <th>반영자</th><th>반영일시</th><th>해제</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="job-detail"></div>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
