@@ -1,0 +1,71 @@
+BOM 포털 (SAP Business ByDesign) - Windows 설치 방법
+=====================================================
+
+Node.js 등 별도 프로그램을 설치할 필요가 없습니다 (실행 환경 포함).
+Windows 10 / 11 / Server 2016 이상 (64비트)
+
+[1] 압축 풀기
+    zip 파일을 마우스 오른쪽 → [모두 압축 풀기] → 예) C:\BOMPortal
+    ※ 압축을 푼 뒤 폴더를 옮기면 자동 시작을 다시 등록해야 합니다.
+
+[2] 처음 실행 (SAP 로그인 설정)
+    bom-portal 폴더의 start.bat 을 더블클릭합니다.
+    처음 한 번은 설정 질문이 나옵니다.
+
+      ByD 주소: my123456.sapbydesign.com      ← SAP ByD 접속 주소
+      포트    : (그냥 Enter = 3000)
+
+    설정이 끝나면 포털이 시작되고 브라우저가 열립니다.
+    안 열리면 http://localhost:3000 으로 접속하세요.
+
+    "Windows의 PC 보호" 창이 뜨면 [추가 정보] → [실행]을 누르세요.
+    방화벽 허용 창이 뜨면, 다른 PC에서 접속하려면 [허용]을 누르세요.
+
+[3] 로그인
+    SAP ByD 에 로그인할 때 쓰는 사용자 ID / 비밀번호를 입력합니다.
+    - 포털은 입력한 ID/비밀번호로 SAP ByD 에 직접 확인하며, 비밀번호는 저장하지 않습니다.
+    - 비밀번호를 5번 틀리면 10분간 로그인이 막힙니다 (SAP 계정 잠김 방지).
+    - 변경이력과 업로드 내역에는 로그인한 SAP 사용자 ID 가 기록됩니다.
+    - 특정 사용자만 쓰게 하려면 .env 의 ALLOWED_USERS 에 SAP 사용자 ID 를 적으세요.
+      예) ALLOWED_USERS=HONG,KIM
+
+    SAP 주소를 비워 두고 설정했다면: admin / change-me
+
+[4] 처음에는 샘플(MOCK) BOM 데이터로 동작합니다
+    로그인은 실제 SAP 계정으로 하고, BOM 화면은 샘플 데이터로 기능을 확인할 수 있습니다.
+    화면 오른쪽 위에 "MOCK 데이터" 표시가 나옵니다.
+    실제 SAP BOM 을 조회/등록하려면 SAP 관리자가 아래를 설정한 뒤 .env 를 바꿉니다.
+      - Custom OData 서비스 (BOM, 자재)
+      - Communication Arrangement (통신 사용자, BOM 관리 웹서비스)
+      - .env: BYD_MODE=byd, BYD_USER, BYD_PASSWORD, BYD_SOAP_BOM_URL ...
+    자세한 내용은 README.md 의 "실제 ByD 연동" 참고.
+
+[5] 설정 바꾸기
+    - setup.bat 다시 실행, 또는
+    - .env 파일을 메모장으로 열어 수정
+    수정 후 포털을 다시 시작하세요 (start.bat 창 닫고 다시 실행).
+
+[6] PC 켜질 때 자동 실행 (서버로 쓸 때)
+    install-autostart.bat 을 마우스 오른쪽 → "관리자 권한으로 실행"
+    해제: uninstall-autostart.bat (관리자 권한으로 실행)
+    로그: logs\server.log
+
+[7] 종료
+    start.bat 창을 닫거나, stop.bat 실행
+
+[8] 다른 PC에서 접속
+    http://이PC의IP주소:3000  (IP 확인: 명령 프롬프트에서 ipconfig)
+    사내 공용으로 쓸 때는 HTTPS(IIS/Nginx 리버스 프록시) 뒤에 두는 것을 권장합니다.
+    (그 경우 .env 에 TRUST_PROXY=1)
+
+[문제 해결]
+    - "SAP ByD에 연결할 수 없습니다": ByD 주소 확인, 이 PC에서 브라우저로 ByD 접속이 되는지 확인
+    - "ID 또는 비밀번호가 올바르지 않습니다": SAP ByD 로그인 화면에서 같은 계정으로 로그인되는지 확인
+    - "BOM 조회 권한이 없습니다": SAP 관리자에게 BOM OData 서비스(작업센터) 권한 요청
+    - "포트 3000 이 이미 사용 중": 이미 실행 중이거나, setup.bat 에서 다른 포트 지정
+
+[데이터]
+    data\portal.db : 업로드 이력과 샘플 데이터. 백업할 때 이 폴더를 복사하세요.
+
+[업데이트]
+    새 버전의 압축을 풀고, 기존 폴더의 .env 파일과 data 폴더를 새 폴더로 복사하세요.

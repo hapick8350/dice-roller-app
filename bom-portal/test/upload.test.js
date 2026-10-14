@@ -135,17 +135,3 @@ test('양식 다운로드와 조회 엑셀 내보내기', async (t) => {
     assert.equal(buf.subarray(0, 2).toString(), 'PK', url); // xlsx = zip
   }
 });
-
-test('APP_USERS 설정 시 Basic 인증이 필요하다', async (t) => {
-  const app = await startApp({ appUsers: [{ name: 'hong', password: 'pw' }] });
-  t.after(app.close);
-  assert.equal((await fetch(`${app.base}/api/me`)).status, 401);
-  const res = await fetch(`${app.base}/api/me`, {
-    headers: { Authorization: 'Basic ' + Buffer.from('hong:pw').toString('base64') },
-  });
-  assert.equal((await res.json()).user, 'hong');
-  const wrong = await fetch(`${app.base}/api/me`, {
-    headers: { Authorization: 'Basic ' + Buffer.from('hong:x').toString('base64') },
-  });
-  assert.equal(wrong.status, 401);
-});

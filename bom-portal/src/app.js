@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('node:path');
-const crypto = require('node:crypto');
 const express = require('express');
 const multer = require('multer');
 
@@ -11,6 +10,7 @@ const { BomService } = require('./services/bomService');
 const { UploadService, httpError } = require('./services/uploadService');
 const excel = require('./services/excel');
 const { STATUS_LABEL } = require('./byd/model');
+const { createAuth } = require('./auth');
 
 const CHANGE_LABEL = {
   CREATED: '최초 등록',
@@ -26,10 +26,14 @@ function createApp(config, deps = {}) {
   const bomService = new BomService(byd);
   const uploadService = new UploadService(db, byd, bomService);
 
+  const auth = createAuth(config, { fetchImpl: deps.authFetch });
+
   const app = express();
   app.disable('x-powered-by');
+  if (config.trustProxy) app.set('trust proxy', true);
   app.use(express.json({ limit: '1mb' }));
-  app.use(authMiddleware(config.appUsers));
+  auth.routes(app);
+  app.use(auth.middleware);
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   const upload = multer({
@@ -46,7 +50,7 @@ function createApp(config, deps = {}) {
   const wantsXlsx = (req) => req.query.format === 'xlsx';
 
   // ── 공통 ───────────────────────────────────────────────
-  app.get('/api/me', (req, res) => res.json({ user: req.user, mode: byd.mode }));
+  app.get('/api/me', (req, res) => res.json({ user: req.user, mode: byd.mode, authMode: auth.mode }));
 
   app.get('/api/health', async (req, res) => {
     try {
@@ -264,42 +268,11 @@ function createApp(config, deps = {}) {
       return res.status(400).json({ error: msg });
     }
     const status = err.status || 500;
-    if (status >= 500) console.error(err);
+    if (status >= 500) console.error(err.expected ? `[오류] ${err.message}` : err);
     res.status(status).json({ error: err.message || '서버 오류' });
   });
 
-  return { app, db, byd, bomService, uploadService };
-}
-
-// HTTP Basic 인증. APP_USERS 가 비어 있으면 인증 없이 anonymous 로 동작한다.
-function authMiddleware(users) {
-  if (!users.length) {
-    return (req, res, next) => {
-      req.user = 'anonymous';
-      next();
-    };
-  }
-  const safeEq = (a, b) => {
-    const x = Buffer.from(a);
-    const y = Buffer.from(b);
-    return x.length === y.length && crypto.timingSafeEqual(x, y);
-  };
-  return (req, res, next) => {
-    const m = (req.headers.authorization || '').match(/^Basic (.+)$/);
-    if (m) {
-      const decoded = Buffer.from(m[1], 'base64').toString('utf8');
-      const i = decoded.indexOf(':');
-      const name = decoded.slice(0, i);
-      const pass = decoded.slice(i + 1);
-      const u = users.find((x) => x.name === name);
-      if (u && safeEq(u.password, pass)) {
-        req.user = name;
-        return next();
-      }
-    }
-    res.setHeader('WWW-Authenticate', 'Basic realm="BOM Portal", charset="UTF-8"');
-    res.status(401).send('로그인이 필요합니다');
-  };
+  return { app, db, byd, bomService, uploadService, auth };
 }
 
 module.exports = { createApp };

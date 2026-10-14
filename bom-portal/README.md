@@ -119,9 +119,37 @@ bom-portal/
 | POST | `/api/upload/jobs/:id/commit` | SAP 반영 (`{ "release": true }` 이면 즉시 해제) |
 | GET | `/api/upload/jobs`, `/api/upload/jobs/:id` | 업로드 내역 |
 | GET | `/api/health` | ByD 연결 확인 |
+| POST | `/api/auth/login`, `/api/auth/logout` | 로그인 / 로그아웃 |
+
+## 로그인 (SAP ByD 계정 연동)
+
+`.env` 의 `AUTH_MODE` 로 정합니다.
+
+| 값 | 동작 |
+|---|---|
+| `byd` | **SAP ByD 사용자 ID/비밀번호로 로그인.** 입력한 계정으로 ByD(`BYD_AUTH_CHECK_PATH`, 기본: BOM OData `$metadata`)를 호출해 인증을 확인합니다. 비밀번호는 저장하지 않습니다. |
+| `local` | `APP_USERS` 에 적은 포털 계정으로 로그인 |
+| `none` | 로그인 없음 (개발용) |
+
+- ByD 응답 401 → 비밀번호 오류, 403 → 권한 없음(로그인 거부), 2xx/404 → 인증 성공으로 처리합니다.
+  (404 는 확인용 OData 서비스가 아직 없을 때. ByD 는 경로를 찾기 전에 인증을 먼저 하므로 인증은 통과한 것으로 봅니다.)
+- Custom OData 서비스를 만든 뒤에는 해당 작업센터 권한이 있는 사용자만 로그인되므로, ByD 권한으로 포털 사용자를 통제할 수 있습니다.
+- `ALLOWED_USERS=HONG,KIM` 으로 사용자를 더 제한할 수 있습니다.
+- 같은 사용자/IP 로 5번 실패하면 10분간 차단하고 ByD 로 요청을 보내지 않습니다 (ByD 계정 잠김 방지).
+- 세션은 서버 메모리에 있으므로 포털을 재시작하면 다시 로그인해야 합니다. 유지 시간은 `SESSION_HOURS`(기본 8시간).
+- 변경이력·업로드 내역에는 로그인한 SAP 사용자 ID 가 기록됩니다.
+  실제 ByD 반영(`BYD_MODE=byd`)은 통신 사용자로 하므로, ByD 쪽 변경자는 통신 사용자로 남습니다.
+
+## 설치 패키지
+
+```bash
+./packaging/build.sh        # dist/ 에 Windows zip, Linux tar.gz 생성 (Node.js 실행 환경 포함)
+```
+
+Windows 설치 방법은 패키지 안의 `INSTALL.txt` 를 참고하세요. (`start.bat` 처음 실행 시 ByD 주소를 묻는 설정이 나옵니다)
 
 ## 보안
 
-- `APP_USERS` 를 설정하면 HTTP Basic 로그인이 적용되고, 변경자 이름이 기록됩니다.
-  운영 환경에서는 HTTPS 리버스 프록시(Nginx 등) 뒤에서 실행하고, 필요하면 사내 SSO로 교체합니다.
+- 사내 공용으로 쓸 때는 HTTPS 리버스 프록시(IIS/Nginx 등) 뒤에서 실행하고 `TRUST_PROXY=1` 로 설정합니다.
+  SAP 비밀번호가 포털을 거치므로 HTTP 로 외부에 열지 마세요.
 - ByD 통신 사용자 비밀번호는 서버의 `.env` 에만 두고 저장소에 올리지 않습니다.

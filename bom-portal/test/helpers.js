@@ -9,15 +9,18 @@ function testConfig(over = {}) {
     port: 0,
     dataDir: ':memory:',
     bydMode: 'mock',
+    authMode: 'none',
     appUsers: [],
+    allowedUsers: [],
+    sessionHours: 8,
     byd: {},
     upload: { maxFileBytes: 5 * 1024 * 1024, maxRows: 5000 },
     ...over,
   };
 }
 
-async function startApp(over) {
-  const ctx = createApp(testConfig(over));
+async function startApp(over, deps) {
+  const ctx = createApp(testConfig(over), deps);
   const server = await new Promise((resolve) => {
     const s = ctx.app.listen(0, () => resolve(s));
   });

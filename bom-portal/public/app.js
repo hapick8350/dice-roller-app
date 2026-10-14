@@ -32,6 +32,10 @@ function toast(msg, isErr = false) {
 
 async function api(url, opts = {}) {
   const res = await fetch(url, opts);
+  if (res.status === 401) {
+    location.replace('/login.html');
+    throw new Error('로그인이 필요합니다');
+  }
   const isJson = (res.headers.get('content-type') || '').includes('json');
   const body = isJson ? await res.json() : await res.text();
   if (!res.ok) throw new Error((isJson && body.error) || body || `HTTP ${res.status}`);
@@ -449,11 +453,17 @@ $('#jobs-table tbody').addEventListener('click', guard(async (e) => {
   }
 }));
 
+$('#logout-btn').addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.replace('/login.html');
+});
+
 // ── 시작 ─────────────────────────────────────────────────
 (async () => {
   try {
     const me = await api('/api/me');
     $('#user-name').textContent = me.user;
+    if (me.authMode !== 'none') $('#logout-btn').hidden = false;
     const mb = $('#mode-badge');
     mb.textContent = me.mode === 'mock' ? 'MOCK 데이터' : 'ByD 연동';
     if (me.mode === 'mock') mb.classList.add('mock');

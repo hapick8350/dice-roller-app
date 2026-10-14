@@ -1,0 +1,24 @@
+BOM 포털 (SAP Business ByDesign) - Linux 설치 방법
+===================================================
+
+Node.js 를 따로 설치할 필요가 없습니다 (실행 환경 포함, x64).
+
+1) 압축 풀기
+   tar xzf bom-portal-*-linux-x64.tar.gz -C /opt
+   cd /opt/bom-portal
+
+2) 설정
+   cp .env.example .env
+   .env 에서 BYD_BASE_URL=my123456.sapbydesign.com 처럼 ByD 주소를 넣으면
+   SAP ByD 사용자 ID/비밀번호로 로그인합니다 (AUTH_MODE=byd).
+   SAP 없이 체험하려면 AUTH_MODE=local (로그인 admin / change-me).
+
+3) 실행
+   ./start.sh          → http://서버IP:3000
+   BOM 데이터는 처음에 샘플(MOCK)입니다. 실제 SAP BOM 연동은 README.md 참고.
+
+4) 서비스 등록 (부팅 시 자동 실행)
+   sudo ./install-service.sh
+   해제: sudo ./uninstall-service.sh
+
+데이터: data/portal.db (백업 대상)
