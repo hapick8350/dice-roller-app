@@ -1,0 +1,1 @@
+25350d1507e9096fbc8c5b951b975412af798cd498746cfa047a13bad0edaaa9  release/bom-portal-0.1.0-win-x64.zip

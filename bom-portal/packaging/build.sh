@@ -50,6 +50,10 @@ stage_app() {
   cp -r "$ROOT/src" "$ROOT/public" "$dest/"
   cp "$ROOT/package.json" "$ROOT/package-lock.json" "$ROOT/README.md" "$ROOT/.env.example" "$dest/"
   (cd "$dest" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error)
+  # 실행에 필요 없는 파일 정리 (브라우저용 번들, 소스맵, 문서, 타입 정의)
+  rm -rf "$dest/node_modules/exceljs/dist" "$dest/node_modules/@types"
+  find "$dest/node_modules" -type f \( -name '*.map' -o -name '*.md' -o -name '*.d.ts' -o -name '*.markdown' \) -delete
+  find "$dest/node_modules" -type d \( -name test -o -name tests -o -name __tests__ -o -name example -o -name examples -o -name docs \) -prune -exec rm -rf {} +
   # 의존성에 네이티브 모듈이 없어야 다른 OS에서 그대로 쓸 수 있다
   if find "$dest/node_modules" -name '*.node' | grep -q .; then
     echo "네이티브 모듈이 있어 크로스 패키징할 수 없습니다" >&2
