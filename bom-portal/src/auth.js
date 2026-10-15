@@ -3,10 +3,14 @@
 // 로그인 / 세션 처리
 //
 // byd 모드: 사용자가 입력한 ByD ID/비밀번호로 ByD에 요청을 한 번 보내 인증 여부를 확인한다.
-//   - 2xx           → 로그인 성공
-//   - 404           → 인증은 통과(ByD는 인증 후 경로를 찾는다). 확인용 서비스가 없을 뿐이므로 성공 처리
-//   - 401           → ID 또는 비밀번호 오류
-//   - 403           → 인증은 됐지만 해당 서비스(작업센터) 권한 없음 → 로그인 거부
+//   - 2xx             → 로그인 성공
+//   - 401 / 로그인 화면으로 리다이렉트 → ID 또는 비밀번호 오류
+//   - 403             → 인증은 됐지만 해당 서비스(작업센터) 권한 없음 → 로그인 거부
+//   - 그 밖(404, 500 등) → 확인용 서비스가 아직 없거나 오류. 이때는 존재하지 않는 가짜 계정으로
+//                       같은 주소를 한 번 더 호출(프로브)해서, 그 주소가 인증을 요구하는지(401) 확인한다.
+//                       인증을 요구하는 주소라면 실제 계정의 404/500 은 "인증 통과 후 서비스 오류"이므로 성공 처리.
+//                       가짜 계정에도 401 이 아니면 판단할 수 없으므로 로그인 거부 (보안상 안전한 쪽)
+//   - 502/503/504     → ByD 연결 오류
 // 비밀번호는 저장하지 않는다.
 
 const crypto = require('node:crypto');
@@ -33,11 +37,13 @@ function createAuth(config, { fetchImpl = fetch } = {}) {
   if (mode === 'byd' && !config.byd.baseUrl) throw new Error('AUTH_MODE=byd 에는 BYD_BASE_URL(ByD 테넌트 주소)이 필요합니다');
   if (mode === 'local' && !config.appUsers.length) throw new Error('AUTH_MODE=local 에는 APP_USERS 설정이 필요합니다');
 
-  async function verifyByd(user, password) {
-    const url = `${config.byd.baseUrl}${config.byd.authCheckPath}`;
+  const checkUrl = () => `${config.byd.baseUrl}${config.byd.authCheckPath}`;
+  let probeCache = null; // { at, status }
+
+  async function callByd(user, password) {
     let res;
     try {
-      res = await fetchImpl(url, {
+      res = await fetchImpl(checkUrl(), {
         headers: { Authorization: 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64') },
         redirect: 'manual',
         signal: AbortSignal.timeout(config.byd.timeoutMs || 30000),
@@ -45,13 +51,42 @@ function createAuth(config, { fetchImpl = fetch } = {}) {
     } catch (e) {
       throw new AuthError(`SAP ByD에 연결할 수 없습니다 (${config.byd.baseUrl}): ${e.cause?.code || e.message}`, 503);
     }
-    await res.arrayBuffer().catch(() => {});
-    if (res.ok || res.status === 404) return;
-    if (res.status === 401) throw new AuthError('SAP 사용자 ID 또는 비밀번호가 올바르지 않습니다');
-    if (res.status === 403) throw new AuthError('SAP 인증은 되었지만 BOM 조회 권한이 없습니다. SAP 관리자에게 권한을 요청하세요', 403);
-    // ByD가 로그인 화면으로 돌려보내는 경우(302)도 인증 실패로 본다
-    if (res.status >= 300 && res.status < 400) throw new AuthError('SAP 사용자 ID 또는 비밀번호가 올바르지 않습니다');
-    throw new AuthError(`SAP 로그인 확인 중 오류가 발생했습니다 (HTTP ${res.status})`, 502);
+    const body = await res.text().catch(() => '');
+    return { status: res.status, body };
+  }
+
+  const isAuthFail = (st) => st === 401 || (st >= 300 && st < 400);
+
+  // 확인 주소가 인증을 요구하는지: 존재하지 않는 계정으로 호출해 401 이 오는지 본다 (10분 캐시)
+  async function addressRequiresAuth() {
+    if (probeCache && Date.now() - probeCache.at < 10 * 60 * 1000) return isAuthFail(probeCache.status);
+    const fakeUser = `ZZPROBE${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const r = await callByd(fakeUser, crypto.randomBytes(12).toString('base64url'));
+    probeCache = { at: Date.now(), status: r.status };
+    console.log(`[SAP 로그인 확인] 가짜 계정 프로브 → HTTP ${r.status}`);
+    return isAuthFail(r.status);
+  }
+
+  async function verifyByd(user, password) {
+    const r = await callByd(user, password);
+    if (r.status >= 200 && r.status < 300) return;
+    if (isAuthFail(r.status)) throw new AuthError('SAP 사용자 ID 또는 비밀번호가 올바르지 않습니다');
+    if (r.status === 403) throw new AuthError('SAP 인증은 되었지만 BOM 조회 권한이 없습니다. SAP 관리자에게 권한을 요청하세요', 403);
+    if ([502, 503, 504].includes(r.status)) {
+      throw new AuthError(`SAP ByD 서버가 응답하지 않습니다 (HTTP ${r.status}). 잠시 후 다시 시도하세요`, 503);
+    }
+    // 404/500 등: 확인용 서비스가 없거나 서비스 오류. 주소가 인증을 요구하면 인증은 통과한 것
+    const snippet = r.body.replace(/\s+/g, ' ').slice(0, 200);
+    console.log(`[SAP 로그인 확인] ${user}: HTTP ${r.status} (${checkUrl()}) ${snippet}`);
+    if (await addressRequiresAuth()) {
+      console.log(`[SAP 로그인 확인] ${user}: 인증 통과 (확인용 서비스 응답 HTTP ${r.status} 은 무시)`);
+      return;
+    }
+    throw new AuthError(
+      `SAP 응답으로 로그인 여부를 판단할 수 없습니다 (HTTP ${r.status}). ` +
+        '.env 의 BYD_AUTH_CHECK_PATH 를 ByD 에 실제로 있는 OData 서비스 주소로 지정하세요',
+      502
+    );
   }
 
   function verifyLocal(user, password) {

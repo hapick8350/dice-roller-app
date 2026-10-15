@@ -120,3 +120,38 @@ test('local 로그인 (APP_USERS)', async (t) => {
   assert.equal(ok.status, 200);
   assert.equal((await fetch(`${app.base}/api/me`, { headers: { cookie: ok.cookie } })).status, 200);
 });
+
+// 실제 ByD 상황 재현: 확인용 OData 서비스가 없으면 인증 통과 후 500, 인증 실패면 401
+async function bydWithoutService(t, { authEnforced = true } = {}) {
+  const calls = [];
+  const server = http.createServer((req, res) => {
+    const auth = Buffer.from((req.headers.authorization || '').replace('Basic ', ''), 'base64').toString();
+    calls.push(auth.split(':')[0]);
+    if (authEnforced && auth !== 'HONG:pw') return res.writeHead(401).end();
+    res.writeHead(500, { 'Content-Type': 'text/html' }).end('<html>Service cannot be reached</html>');
+  });
+  await new Promise((r) => server.listen(0, r));
+  t.after(() => server.close());
+  return { url: `http://127.0.0.1:${server.address().port}`, calls };
+}
+
+test('SAP ByD 로그인: 확인용 서비스가 없어 500 이 와도, 인증을 요구하는 주소면 로그인된다', async (t) => {
+  const byd = await bydWithoutService(t);
+  const app = await startApp({ authMode: 'byd', byd: { baseUrl: byd.url, authCheckPath: '/sap/byd/odata/cust/v1/zbom/$metadata', timeoutMs: 5000 } });
+  t.after(app.close);
+  const ok = await login(app.base, 'hong', 'pw');
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.ok(byd.calls.some((u) => u.startsWith('ZZPROBE')), '가짜 계정 프로브를 보내야 한다');
+  // 틀린 비밀번호는 여전히 거부
+  const bad = await login(app.base, 'hong', 'nope');
+  assert.equal(bad.status, 401);
+});
+
+test('SAP ByD 로그인: 가짜 계정에도 500 이면 판단 불가로 거부한다 (아무 비밀번호나 통과 방지)', async (t) => {
+  const byd = await bydWithoutService(t, { authEnforced: false });
+  const app = await startApp({ authMode: 'byd', byd: { baseUrl: byd.url, authCheckPath: '/x', timeoutMs: 5000 } });
+  t.after(app.close);
+  const r = await login(app.base, 'hong', 'anything');
+  assert.equal(r.status, 502);
+  assert.match(r.body.error, /BYD_AUTH_CHECK_PATH/);
+});
