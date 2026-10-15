@@ -155,3 +155,12 @@ test('SAP ByD 로그인: 가짜 계정에도 500 이면 판단 불가로 거부�
   assert.equal(r.status, 502);
   assert.match(r.body.error, /BYD_AUTH_CHECK_PATH/);
 });
+
+test('ByD 주소: 브라우저 주소창 URL 을 그대로 넣어도 호스트만 사용한다', () => {
+  const { normalizeTenantUrl } = require('../src/config');
+  assert.equal(
+    normalizeTenantUrl('https://my434992.businessbydesign.cloud.sap/sap/public/ap/ui/repository/SAP_UI/HTMLOBERON5/client.html?app.component=/SAP_UI_CT/Main/root.uiccwoc&rootWindow=X&redirectUrl=/sap/public/byd/runtime'),
+    'https://my434992.businessbydesign.cloud.sap'
+  );
+  assert.equal(normalizeTenantUrl(' my434992.businessbydesign.cloud.sap/ '), 'https://my434992.businessbydesign.cloud.sap');
+});

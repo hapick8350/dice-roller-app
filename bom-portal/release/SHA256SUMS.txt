@@ -1,1 +1,1 @@
-602669af36c323b07e5af7759665ed23d306b17b9dd0ba640ead167b754e66ab  bom-portal-0.1.0-win-x64.zip
+0e2dcbbd6496743dcbdc4fa553a3a4fae99a2dc4c0bde95d9c66166b2ce5931e  bom-portal-0.1.0-win-x64.zip

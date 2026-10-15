@@ -15,16 +15,24 @@ function loadDotEnv(file) {
 
 loadDotEnv(path.join(__dirname, '..', '.env'));
 
-// "my123456.sapbydesign.com" 처럼 입력해도 https://my123456.sapbydesign.com 으로 맞춘다
+// ByD 주소는 어떤 형태로 입력해도 "https://호스트" 만 남긴다.
+//   my123456.sapbydesign.com
+//   https://my434992.businessbydesign.cloud.sap/sap/public/ap/ui/repository/...client.html?...
 function normalizeTenantUrl(v) {
-  let s = String(v).trim().replace(/\/+$/, '');
-  if (s && !/^https?:\/\//i.test(s)) s = `https://${s}`;
-  return s;
+  let s = String(v).trim();
+  if (!s) return '';
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    return new URL(s).origin;
+  } catch {
+    return s.replace(/\/+$/, '');
+  }
 }
 
 const env = process.env;
 
 module.exports = {
+  normalizeTenantUrl,
   port: Number(env.PORT || 3000),
   dataDir: env.DATA_DIR || path.join(__dirname, '..', 'data'),
 

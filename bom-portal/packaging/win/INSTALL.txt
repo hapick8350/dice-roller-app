@@ -12,7 +12,8 @@ Windows 10 / 11 / Server 2016 이상 (64비트)
     bom-portal 폴더의 start.bat 을 더블클릭합니다.
     처음 한 번은 설정 질문이 나옵니다.
 
-      ByD 주소: my123456.sapbydesign.com      ← SAP ByD 접속 주소
+      ByD 주소: my434992.businessbydesign.cloud.sap   ← SAP ByD 접속 주소
+                (브라우저 주소창 주소를 통째로 붙여넣어도 됩니다)
       포트    : (그냥 Enter = 3000)
 
     설정이 끝나면 포털이 시작되고 브라우저가 열립니다.

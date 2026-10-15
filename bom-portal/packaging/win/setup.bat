@@ -13,7 +13,8 @@ if /i not "%AGAIN%"=="Y" goto end
 
 :ask
 echo SAP Business ByDesign 로그인을 연동합니다.
-echo ByD에 접속할 때 쓰는 주소를 입력하세요. 예) my123456.sapbydesign.com
+echo ByD에 접속할 때 쓰는 주소를 입력하세요. 예) my434992.businessbydesign.cloud.sap
+echo (브라우저 주소창의 주소를 통째로 붙여넣어도 됩니다)
 echo (SAP 연동 없이 체험만 하려면 그냥 Enter)
 echo.
 set "TENANT="
